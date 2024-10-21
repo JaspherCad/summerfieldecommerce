@@ -194,7 +194,10 @@ public class ProductService {
             product.setQuantity(productDTO.getQuantity());
             product.setCategory(productDTO.getCategory());
             product.setImgSrc(productDTO.getImgSrc());
-            for (String tagName : productDTO.getTagNames()) {
+            
+            
+            List<Tag> listOfTags = new ArrayList<>();
+            for (String tagName : productDTO.getTagNames()) { //since getTAgNames is string...
                 // Find the tag by name, or create it if it doesn't exist
                 Tag tag = tagRepository.findByName(tagName)
                         .orElseGet(() -> {
@@ -206,10 +209,10 @@ public class ProductService {
 
                 // Add the tag to the product's tags list if it's not already there
                 if (!product.getTags().contains(tag)) {
-                    product.getTags().add(tag);
+                	listOfTags.add(tag);
                 }
             }
-
+            product.setTags(listOfTags);
             // Save updated product to the repository
             productRepository.save(product);
 

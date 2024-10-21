@@ -94,21 +94,23 @@ public class OrderController {
     //confirmOrder(Long orderId, Long storeId)
     @PutMapping("seller/orders/{storeId}/accept/{orderId}")
     public ResponseEntity<OrderEntityDTO> confirmOrderStatus(@PathVariable Long storeId,
-    		@PathVariable Long orderId) {
+    		@PathVariable Long orderId, @RequestBody Map<String, Object> payload) {
     	Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 	    User currentUser = (User) authentication.getPrincipal();
 		
-		OrderEntityDTO updatedOrder = orderService.confirmOrder(currentUser, orderId);
+	    String message = payload.get("sellerMessage").toString();
+		OrderEntityDTO updatedOrder = orderService.confirmOrder(currentUser, orderId, message);
 		return ResponseEntity.ok(updatedOrder);
 	}
     
     @PutMapping("seller/orders/{storeId}/reject/{orderId}")
     public ResponseEntity<OrderEntityDTO> rejectOrderStatus(@PathVariable Long storeId,
-    		@PathVariable Long orderId) {
+    		@PathVariable Long orderId, @RequestBody Map<String, Object> payload) {
 		
     	Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 	    User currentUser = (User) authentication.getPrincipal();
-		OrderEntityDTO updatedOrder = orderService.rejectOrderOfUser(currentUser, storeId);
+	    String message = payload.get("sellerMessage").toString();
+		OrderEntityDTO updatedOrder = orderService.rejectOrderOfUser(currentUser, storeId, message);
 		return ResponseEntity.ok(updatedOrder);
 	}
     

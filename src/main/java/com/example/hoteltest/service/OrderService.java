@@ -221,10 +221,17 @@ public class OrderService {
 
 
 
+    //error will be here. USER ID IS NOT ALWAYS STORE ID
     
-    public OrderEntityDTO getSpecificOrderDetails(Long orderId, Long storeId) {
+    public OrderEntityDTO getSpecificOrderDetails(Long orderId, Long sellerId) {
         OrderEntity order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
+        
+        User user = userRepository.findById(sellerId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        Long storeId = user.getStore().getId();
+
 
         // Ensure the seller is authorized to view this order
         boolean sellerHasProduct = order.getOrderItems().stream()
@@ -243,15 +250,19 @@ public class OrderService {
     	OrderEntity order = orderRepository.findById(sellerId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+    	User user = userRepository.findById(sellerId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        Long storeId = user.getStore().getId();
     	
     	boolean sellerIsTheOwnerOfProduct = order.getOrderItems().stream()
-    			.anyMatch(item -> item.getProduct().getStore().getId().equals(sellerId));
+    			.anyMatch(item -> item.getProduct().getStore().getId().equals(storeId));
     	
     	if (!sellerIsTheOwnerOfProduct) {
     		throw new MyCustomException("Not authorized to edit");
     	}
     	
-    	order.setStatus(status);
+    	order.setStatus(status); // PENDING, ACCEPTED, REJECTED
     	orderRepository.save(order);
     	return new OrderEntityDTO(order);
     	//verify if current user is allowed to change the status thru sellerId
@@ -260,7 +271,7 @@ public class OrderService {
     }
     
     @Transactional
-    public OrderEntityDTO confirmOrder(User user, Long orderId) {
+    public OrderEntityDTO confirmOrder(User user, Long orderId, String message) {
     	//first find the order id
     	
     	// loop thru items to 
@@ -303,14 +314,17 @@ public class OrderService {
     	//seller.setRevenue
     	
     	order.setStatus("ACCEPTED");
+   
     	OrderEntity savedOrder =  orderRepository.save(order);
-    	return new OrderEntityDTO(savedOrder);
+    	OrderEntityDTO orderEntityDTO =  new OrderEntityDTO(savedOrder);
+    	orderEntityDTO.setMessageFromSeller(message);
+    	return orderEntityDTO;
     	
 
     }
     
-    @Transactional
-    public OrderEntityDTO rejectOrderOfUser(User user, Long orderId) {
+    
+    public OrderEntityDTO rejectOrderOfUser(User user, Long orderId, String message) {
     	//find the order thru id
     	
     	//use for loop thru orderitem
@@ -321,18 +335,25 @@ public class OrderService {
     	OrderEntity order = orderRepository.findById(orderId)
     			.orElseThrow(() -> new RuntimeException("seller not found"));
 
-    	for(OrderItem orderItem: order.getOrderItems()) {
-    		Product product = orderItem.getProduct();
-    		
-    		if(!product.getStore().getId().equals(user.getStore().getId())) {
+    	for (OrderItem orderItem : order.getOrderItems()) {
+            Product product = orderItem.getProduct();
+            if (!product.getStore().getId().equals(user.getStore().getId())) {
                 throw new RuntimeException("Unauthorized access");
-    		}
-    		
-    	}
-    	
-    	order.setStatus("CANCELLED");
-    	OrderEntity savedOrder = orderRepository.save(order);
-    	return new OrderEntityDTO(savedOrder);
+            }
+        }
+
+        // Ensure order status can only be set to CANCELLED if it’s in a valid state
+        if (order.getStatus().equals("CANCELLED")) {
+            throw new RuntimeException("Order is already cancelled");
+        }
+
+        // Update order status
+        order.setStatus("CANCELLED");
+        
+    	OrderEntity savedOrder =  orderRepository.save(order);
+    	OrderEntityDTO orderEntityDTO =  new OrderEntityDTO(savedOrder);
+    	orderEntityDTO.setMessageFromSeller(message);
+    	return orderEntityDTO;
     }
     
     

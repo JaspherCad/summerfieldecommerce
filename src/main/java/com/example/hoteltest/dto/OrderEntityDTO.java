@@ -26,6 +26,7 @@ public class OrderEntityDTO {
     private boolean doDelivery; // Example field from Store
     private String paymentMethod; //gcash or cash
     private String pickupOrDeliver; //pickup or delivery
+    private String messageFromSeller;
     // Constructors, getters, setters
 
     public OrderEntityDTO() {}
@@ -164,6 +165,14 @@ public class OrderEntityDTO {
 
 	public void setPickupOrDeliver(String pickupOrDeliver) {
 		this.pickupOrDeliver = pickupOrDeliver;
+	}
+
+	public String getMessageFromSeller() {
+		return messageFromSeller;
+	}
+
+	public void setMessageFromSeller(String messageFromSeller) {
+		this.messageFromSeller = messageFromSeller;
 	}
 
 	
