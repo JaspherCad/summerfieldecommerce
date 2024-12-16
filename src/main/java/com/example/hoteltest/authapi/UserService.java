@@ -3,6 +3,7 @@ package com.example.hoteltest.authapi;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -12,16 +13,26 @@ import com.example.hoteltest.dto.Response;
 import com.example.hoteltest.dto.UserDTO;
 import com.example.hoteltest.exceptiom.MyCustomException;
 import com.example.hoteltest.model.User;
+import com.example.hoteltest.model.UserLog;
+import com.example.hoteltest.repository.UserLogRepository;
 import com.example.hoteltest.repository.UserRepository;
+import com.example.hoteltest.service.OrderService;
 import com.example.hoteltest.service.utils.Utils;
 
 @Service
 public class UserService {
+    @Autowired
     private final UserRepository userRepository;
+    
+    @Autowired
+    private UserLogRepository userLogRepository;
 
+    
     public UserService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
+    
+    
 
     public List<User> allUsers() {
         List<User> users = new ArrayList<>();
@@ -31,7 +42,33 @@ public class UserService {
         return users;
     }
     
+    public List<UserLog> getUsersLogByUserId(Long userId){
+    	List<UserLog> userLogs = userLogRepository.findByUserId(userId);
+    	return userLogs;
+    }
     
+    public List<User> getAllSellers() {
+        return userRepository.findByRole("SELLER");
+    }
+    
+    
+    public List<UserLog> getSellerLogs(Long sellerId) {
+        return userLogRepository.findByUserIdAndAction(sellerId, "SALE");
+    }
+
+    
+    // "PURCHASE" or "PRODUCT_ADDED"
+    public List<UserLog> getUserLogsByAction(Long userId, String action) {
+    	List<UserLog> userLogs = userLogRepository.findByUserIdAndAction(userId, action);
+    	return userLogs;
+//    	List<UserLog> userLogsByAction = userLogs.stream()
+//    				.filter(log -> log.getUser().getId().equals(userId) && log.getAction().equalsIgnoreCase(action))
+//    				.collect(Collectors.toList());
+    	//PRACTICE ONLY. repository is faster
+    	
+    	
+
+    }
     
     
     

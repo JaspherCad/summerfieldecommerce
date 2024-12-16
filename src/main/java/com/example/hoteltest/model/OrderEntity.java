@@ -12,6 +12,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 
@@ -28,8 +29,14 @@ public class OrderEntity {
     
     @ManyToOne
     private User buyer; 
+    
+    @ManyToOne(fetch = FetchType.LAZY) 
+    @JoinColumn(name = "store_id")
+    private Store store;
 
     private BigDecimal totalPrice;
+    @Column(nullable = true)
+    private BigDecimal cost;
     private String status; // PENDING, SHIPPED, DELIVERED
     private LocalDateTime createdAt;
 
@@ -120,7 +127,22 @@ public class OrderEntity {
 	public void setPickupOrDeliver(String pickupOrDeliver) {
 		this.pickupOrDeliver = pickupOrDeliver;
 	}
+
+	public Store getStore() {
+		return store;
+	}
+
+	public void setStore(Store store) {
+		this.store = store;
+	}
+
+	public BigDecimal getCost() {
+		return cost;
+	}
+
+	public void setCost(BigDecimal cost) {
+		this.cost = cost;
+	}
     
     
-    // Constructors, getters, and setters
 }

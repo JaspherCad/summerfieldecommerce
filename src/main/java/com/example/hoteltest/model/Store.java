@@ -33,6 +33,9 @@ public class Store {
 	    @Column(nullable = false)
 	    private String description;
 
+	    @Column(nullable = true) 
+	    private Long gcashNumber;
+	    
 	    private Integer block; // Address of the store, optional for now
 	    private Integer lot; // Address of the store, optional for now
 
@@ -172,6 +175,14 @@ public class Store {
 
 		public void setDoDelivery(boolean doDelivery) {
 			this.doDelivery = doDelivery;
+		}
+
+		public Long getGcashNumber() {
+			return gcashNumber;
+		}
+
+		public void setGcashNumber(Long gcashNumber) {
+			this.gcashNumber = gcashNumber;
 		}
 	    
 	    

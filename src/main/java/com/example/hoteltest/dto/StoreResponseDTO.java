@@ -38,6 +38,7 @@ public class StoreResponseDTO {
     private Integer lot; // Address of the store, optional for now
 
     private String phoneNumber;
+    private Long gcashNumber;
     private LocalTime openingTime; // Store's opening time
     private LocalTime closingTime; // Store's closing time
 
@@ -67,11 +68,13 @@ public class StoreResponseDTO {
 		this.phoneNumber = actualStore.getPhoneNumber();
 		this.openingTime = actualStore.getOpeningTime();
 		this.closingTime = actualStore.getClosingTime();
+		this.gcashNumber = actualStore.getGcashNumber();
 		this.user = actualStore.getUser();
 		this.createdAt = actualStore.getCreatedAt();
 		this.updatedAt = actualStore.getUpdatedAt();
 		this.gcash = actualStore.isGcash();
 		this.doDelivery = actualStore.isDoDelivery();
+		
 		System.out.println("Gcash: " + actualStore.isGcash());
         System.out.println("DoDelivery: " + actualStore.isDoDelivery());
 		this.products = actualStore.getProducts().stream()
@@ -193,6 +196,14 @@ public class StoreResponseDTO {
 
 	public void setDoDelivery(boolean doDelivery) {
 		this.doDelivery = doDelivery;
+	}
+
+	public Long getGcashNumber() {
+		return gcashNumber;
+	}
+
+	public void setGcashNumber(Long gcashNumber) {
+		this.gcashNumber = gcashNumber;
 	}
     
     

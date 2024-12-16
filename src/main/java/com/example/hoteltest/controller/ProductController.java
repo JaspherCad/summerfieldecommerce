@@ -1,17 +1,22 @@
 package com.example.hoteltest.controller;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.event.EventListener;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,6 +25,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.example.hoteltest.dto.HomePageProductDTO;
 import com.example.hoteltest.dto.ProductDTO;
@@ -27,7 +33,21 @@ import com.example.hoteltest.dto.Response;
 import com.example.hoteltest.model.Product;
 import com.example.hoteltest.model.User;
 import com.example.hoteltest.service.ProductService;
+import com.example.hoteltest.service.ProductUpdateEvent;
+import com.example.hoteltest.service.sellerdashboard.TopProductDTO;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+import reactor.core.publisher.Flux;
+
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Consumer;
 @RestController
 @RequestMapping("/products")
 public class ProductController {
@@ -35,6 +55,75 @@ public class ProductController {
 	@Autowired
 	ProductService productService;
 	
+	
+    private final List<Consumer<ProductDTO>> subscribers = new CopyOnWriteArrayList<>();
+    		//each subscribers who accepted (event.getProductDto()));)
+    		//subscribe has list of = [consumer, consumer, consumer, consumer]
+	
+    
+    
+    
+    
+    
+    //    2: Handling the Event: In your ProductController, you have an event listener that listens for ProductUpdateEvent:
+    //this HAS BEEN TRIGGERED after adding product from productService
+    //When ProductUpdateEvent is published, this method is automatically triggered.
+
+    @EventListener
+    public void handleProductUpdateEvent(ProductUpdateEvent event) {
+        subscribers.forEach(consumer -> consumer.accept(event.getProductDto()));
+    }
+    
+    
+    
+  //3: (remember, 1: was pushing the ProductDTO to ProductUpdateEvent at ProductService.java
+  	//3: --
+    
+   
+    //SO WHAT IS THIS?? sa react, if the jsx subscribers to 8080/product/updates;;; dito mapupunta logic/
+    //what this do? bascically we just LISTEN on HOW THE (1 & 2 insctrution) WAS CREATED. /updates JUST FETCH and send to react js THIS ALL
+    @GetMapping(value = "/updates", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<ProductDTO> getProductUpdates() {
+        return Flux.create(sink -> {
+            Consumer<ProductDTO> consumer = sink::next;
+            subscribers.add(consumer);
+            sink.onCancel(() -> subscribers.remove(consumer));
+        });
+    }
+
+    
+
+	
+    
+    
+    
+//    Summary of the Flow
+//    Step 1: A product is added via the addProduct method.
+//    Step 2: ProductUpdateEvent is created and published using ApplicationEventPublisher.
+//    Step 3: The event listener (handleProductUpdateEvent) reacts to the published event and notifies all subscribers (clients connected to the SSE endpoint).
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    @GetMapping("/top-products/limit/{limit}")
+    public List<TopProductDTO> topProducts(@PathVariable int limit){
+    	Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = (User) authentication.getPrincipal();
+        
+    	return productService.getBestSellingProductOfAShopByShopId(currentUser.getStore().getId(), limit);
+    }
+    
 	@PostMapping("/add")
     @PreAuthorize("hasAuthority('SELLER')")
 	public ResponseEntity<Response> addProduct(@RequestBody ProductDTO productDTO, @AuthenticationPrincipal User user){
@@ -46,6 +135,20 @@ public class ProductController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
 	}
 	
+//	@GetMapping(value = "/updates", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+//    public SseEmitter getProductUpdates() {
+//        SseEmitter emitter = productService.registerEmitter();
+//        // Set header explicitly
+//        try {
+//            emitter.send(SseEmitter.event().reconnectTime(5000)); // Set reconnection time on the client side
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//        return emitter;
+//	}
+	
+    
+	
 	@GetMapping("/{productId}")
     public ResponseEntity<Response> getProduct(@PathVariable Long productId) {
         Response response = productService.getProduct(productId);
@@ -56,10 +159,14 @@ public class ProductController {
 	//get using path variable the seller id
 	//after getting the seller id, send it to the productSeviceTOgeet spcificProducf
 	
-	public ResponseEntity<Response> getProductOfSpecifcUser(@PathVariable Long sellerId){ //serialization issue
+	public ResponseEntity<Response> getProductOfSpecifcUser(@PathVariable Long sellerId, @AuthenticationPrincipal User currentUser){ //serialization issue
 		
-			    
-	    Response response = productService.getProductOfSpecificUser(sellerId);
+    
+	    // Use `currentUser` directly without needing to access `SecurityContextHolder`
+			//coz getting product without authorization may cause string like "annonymouse" and not a class.
+		System.out.println(currentUser);
+	    Response response = productService.getProductOfSpecificUser(sellerId, currentUser);
+	   
         return ResponseEntity.status(response.getStatusCode()).body(response);
 	    
 	    

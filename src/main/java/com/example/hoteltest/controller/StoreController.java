@@ -8,6 +8,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -40,4 +41,16 @@ public class StoreController {
         return storeResponse;
 
     }
+    @GetMapping("/myStore")
+    @PreAuthorize("hasAuthority('SELLER')")
+    public Response myStore() {
+    	Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+	    User currentUser = (User) authentication.getPrincipal();
+	    
+	    Response storeResponseDTO = storeService.myStore(currentUser);
+	    return storeResponseDTO;
+    	
+    }
+    
+    
 }

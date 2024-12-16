@@ -18,8 +18,32 @@ public class ProductResponseDTO {
     private String imgSrc;
     private List<String> tagNames;
     
+    private BigDecimal cost; //magkano ginastos sa product. for analysis
+    private BigDecimal discount;  // Discount percentage
+
     
-    //MANUALLY DO THIS. USE UR BRAIN
+    private BigDecimal priceAfterDiscount; //is a must
+    
+    
+    public BigDecimal getCost() {
+		return cost;
+	}
+	public void setCost(BigDecimal cost) {
+		this.cost = cost;
+	}
+	public BigDecimal getDiscount() {
+		return discount;
+	}
+	public void setDiscount(BigDecimal discount) {
+		this.discount = discount;
+	}
+	public BigDecimal getPriceAfterDiscount() {
+		return priceAfterDiscount;
+	}
+	public void setPriceAfterDiscount(BigDecimal priceAfterDiscount) {
+		this.priceAfterDiscount = priceAfterDiscount;
+	}
+	//MANUALLY DO THIS. USE UR BRAIN
     private boolean gcash;
     private boolean doDelivery;
 

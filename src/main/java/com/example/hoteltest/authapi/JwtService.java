@@ -22,6 +22,9 @@ public class JwtService {
 
     @Value("${security.jwt.expiration-time}")
     private long jwtExpiration;
+    
+    @Value("${security.jwt.refresh-expiration-time}") 
+    private long refreshExpiration;
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -32,6 +35,15 @@ public class JwtService {
         return claimsResolver.apply(claims);
     }
 
+    
+    public String generateRefreshToken(UserDetails userDetails) { 
+        return generateRefreshToken(new HashMap<>(), userDetails);
+    }
+    
+    public String generateRefreshToken(Map<String, Object> extraClaims, UserDetails userDetails) {
+        return buildToken(extraClaims, userDetails, refreshExpiration);
+    }
+    
     public String generateToken(UserDetails userDetails) {
         return generateToken(new HashMap<>(), userDetails);
     }

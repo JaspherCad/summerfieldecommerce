@@ -1,11 +1,20 @@
 package com.example.hoteltest.controller;
 
 import java.util.List;
+import reactor.core.publisher.Flux;
+
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Consumer;
+import java.util.Map;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.event.EventListener;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,6 +30,9 @@ import com.example.hoteltest.dto.OrderRequest;
 import com.example.hoteltest.dto.Response;
 import com.example.hoteltest.model.User;
 import com.example.hoteltest.service.OrderService;
+import com.example.hoteltest.service.OrderUpdateEvent;
+import com.example.hoteltest.service.sellerdashboard.RankingCustomerDTO;
+import com.example.hoteltest.service.sellerdashboard.RecentOrdersTable;
 
 import jakarta.transaction.Transactional;
 
@@ -30,6 +42,25 @@ public class OrderController {
 
     @Autowired
     private OrderService orderService;
+    private final List<Consumer<OrderEntityDTO>> orderSubscribers = new CopyOnWriteArrayList<>();
+
+    
+    //Where we get the pushed events from @EventListener
+    @GetMapping(value = "/updates", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<OrderEntityDTO> getOrderUpdates() {
+        return Flux.create(sink -> {
+            Consumer<OrderEntityDTO> consumer = sink::next;
+            orderSubscribers.add(consumer); //register new subscribers
+            sink.onCancel(() -> orderSubscribers.remove(consumer));
+        });
+    }
+    
+    
+    // Event listener that pushes order updates to all connected clients
+    @EventListener
+    public void handleOrderUpdateEvent(OrderUpdateEvent event) {
+        orderSubscribers.forEach(consumer -> consumer.accept(event.getOrderDto()));
+    }
 
     
     @GetMapping("buyer/me")//since seller can be a buyer too, use UserId
@@ -42,6 +73,7 @@ public class OrderController {
     }
     
     
+    
     @PostMapping("/place")
     public ResponseEntity<OrderEntityDTO> placeOrder(@RequestBody Map<String, Object> payload) {
     	Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -50,7 +82,7 @@ public class OrderController {
 	    
 	    String paymentMethod = payload.get("paymentMethod").toString();
 	    String pickupOrDeliver = payload.get("pickupOrDeliver").toString();
-    	OrderEntityDTO orderDTO = orderService.placeOrder(currentUser.getId(), paymentMethod, pickupOrDeliver);
+    	OrderEntityDTO orderDTO = orderService.placeOrder(currentUser.getId(), paymentMethod, pickupOrDeliver, currentUser.getFullName());
         return ResponseEntity.ok(orderDTO);
     }
     
@@ -99,7 +131,7 @@ public class OrderController {
 	    User currentUser = (User) authentication.getPrincipal();
 		
 	    String message = payload.get("sellerMessage").toString();
-		OrderEntityDTO updatedOrder = orderService.confirmOrder(currentUser, orderId, message);
+		OrderEntityDTO updatedOrder = orderService.confirmOrder(currentUser, orderId, message, currentUser.getFullName());
 		return ResponseEntity.ok(updatedOrder);
 	}
     
@@ -109,10 +141,71 @@ public class OrderController {
 		
     	Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 	    User currentUser = (User) authentication.getPrincipal();
+	    
 	    String message = payload.get("sellerMessage").toString();
-		OrderEntityDTO updatedOrder = orderService.rejectOrderOfUser(currentUser, storeId, message);
+		OrderEntityDTO updatedOrder = orderService.rejectOrderOfUser(currentUser, orderId, message, currentUser.getFullName());
 		return ResponseEntity.ok(updatedOrder);
 	}
     
+    @GetMapping("api/tableorders")
+    public List<RecentOrdersTable> findRecentProductOrdersByStoreUserIdForTableUsingDb(){
+    	Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+	    User currentUser = (User) authentication.getPrincipal();
+    	return orderService.findRecentProductOrdersByStoreUserIdForTableUsingDb(currentUser.getId());
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    //CUSTOMER RANKING
+    
+    @GetMapping("customers/ranking-by/order-count/{size}")
+    public List<RankingCustomerDTO> rankCustomersByOrderCount(
+    		@AuthenticationPrincipal User user,
+    		@PathVariable int size) {
+    	
+    	return orderService.rankCustomersByOrderCount(user.getStore().getId(), size);
+    }
+    
+    @GetMapping("customers/ranking-by/order-weightedscore/{size}")
+    public List<RankingCustomerDTO> rankCustomersByWeightedScore(
+    		@AuthenticationPrincipal User user,
+    		@PathVariable int size) {
+    	
+    	return orderService.rankCustomersByWeightedScore(user.getStore().getId(), size);
+    }
+    
+    @GetMapping("customers/ranking-by/order-profit/{size}")
+    public List<RankingCustomerDTO> rankCustomersByProfit(
+    		@AuthenticationPrincipal User user,
+    		@PathVariable int size) {
+    	
+    	return orderService.rankCustomersByProfit(user.getStore().getId(), size);
+    }
+    
+    @GetMapping("customers/ranking-by/order-receny/{size}")
+    public List<RankingCustomerDTO> rankCustomersByRecencyActive(
+    		@AuthenticationPrincipal User user,
+    		@PathVariable int size) {
+    	
+    	return orderService.rankCustomersByRecencyActive(user.getStore().getId(), size);
+    }
+    
+    @GetMapping("customers/ranking-by/order-revenue/{size}")
+    public List<RankingCustomerDTO> rankCustomersByRevenueGive(
+    		@AuthenticationPrincipal User user,
+    		@PathVariable int size) {
+    	
+    	return orderService.rankCustomersByRevenueGive(user.getStore().getId(), size);
+    }
     
 }

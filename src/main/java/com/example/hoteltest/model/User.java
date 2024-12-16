@@ -77,6 +77,13 @@ public class User implements UserDetails {
     @JsonIgnore // Prevent recursion
     private Store store; // Link user to store for sellers
     
+    //will be filled at storeService
+    @Column(nullable = true) 
+    private Long storeId;    
+    
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<Review> reviews = new ArrayList<>();
     
     
     
@@ -88,8 +95,12 @@ public class User implements UserDetails {
     
     
     
-    
-    
+	public List<Review> getReviews() {
+		return reviews;
+	}
+	public void setReviews(List<Review> reviews) {
+		this.reviews = reviews;
+	}
 	@Override
 	public Collection<? extends GrantedAuthority> getAuthorities() {
 		return List.of(new SimpleGrantedAuthority(role));
@@ -219,6 +230,23 @@ public class User implements UserDetails {
 	}
 	public void setOrders(List<OrderEntity> orders) {
 		this.orders = orders;
+	
+	}
+	
+	
+	
+	public Long getStoreId() {
+		return storeId;
+	}
+	public void setStoreId(Long storeId) {
+		this.storeId = storeId;
+	}
+	@Override
+	public String toString() {
+		return "User [id=" + id + ", fullName=" + fullName + ", email=" + email + ", password=" + password
+				+ ", createdAt=" + createdAt + ", phoneNumber=" + phoneNumber + ", role=" + role + ", block=" + block
+				+ ", lot=" + lot + ", bookings=" + bookings + ", cart=" + cart + ", orders=" + orders + ", store="
+				+ store + ", reviews=" + reviews + "]";
 	}
 	
 	

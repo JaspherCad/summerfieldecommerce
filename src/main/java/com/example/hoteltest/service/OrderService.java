@@ -1,6 +1,10 @@
 package com.example.hoteltest.service;
 
 import java.math.BigDecimal;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
 import java.nio.file.AccessDeniedException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -8,6 +12,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.example.hoteltest.dto.OrderEntityDTO;
@@ -23,11 +31,16 @@ import com.example.hoteltest.model.OrderItem;
 import com.example.hoteltest.model.Product;
 import com.example.hoteltest.model.Store;
 import com.example.hoteltest.model.User;
+import com.example.hoteltest.model.UserLog;
 import com.example.hoteltest.repository.CartRepository;
 import com.example.hoteltest.repository.OrderRepository;
 import com.example.hoteltest.repository.ProductRepository;
 import com.example.hoteltest.repository.StoreRepository;
+import com.example.hoteltest.repository.UserLogRepository;
 import com.example.hoteltest.repository.UserRepository;
+import com.example.hoteltest.service.sellerdashboard.RankingCustomerDTO;
+import com.example.hoteltest.service.sellerdashboard.RecentOrdersTable;
+import com.example.hoteltest.service.sellerdashboard.TopProductDTO;
 
 import jakarta.transaction.Transactional;
 
@@ -47,13 +60,22 @@ public class OrderService {
     
     @Autowired
     private StoreRepository storeRepository;
+
+    @Autowired
+    private UserLogRepository userLogRepository;
     
     
+    private final ApplicationEventPublisher eventPublisher;
+
+    @Autowired
+    public OrderService(ApplicationEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
+    }
     
     
     
     @Transactional
-    public OrderEntityDTO placeOrder(Long userId, String paymentMethod, String pickupOrDeliver) {
+    public OrderEntityDTO placeOrder(Long userId, String paymentMethod, String pickupOrDeliver, String currentUser) {
     	
     	try {
     		User user = userRepository.findById(userId)
@@ -67,12 +89,14 @@ public class OrderService {
                 throw new RuntimeException("Cart is empty");
             }
 
+
+
             // Create new OrderEntity and set basic information
             OrderEntity order = new OrderEntity();
             order.setBuyer(user);
             order.setCreatedAt(LocalDateTime.now());
             order.setStatus("PENDING");
-
+           
 
             // Initialize the list of OrderItems in the service
             List<OrderItem> orderItems = new ArrayList<>();
@@ -80,21 +104,36 @@ public class OrderService {
             
             boolean gcashAvailable = true; 
             boolean deliveryAvailable = true; 
+            
+            // Log for tracking each seller's sales
+            List<UserLog> sellerLogs = new ArrayList<>();
+            BigDecimal totalCost = BigDecimal.ZERO;
+            Store store = null; // Initialize store variable
 
             // Convert cart items to order items
             for (CartItem cartItem : cart.getCartItems()) {
+            	
                 OrderItem orderItem = new OrderItem();
+                
+                //FROM CART...
+                
+                BigDecimal cost = cartItem.getProduct().getCost(); 
+                if (cost == null) { 
+                	cost = cartItem.getProduct().getPrice(); 
+                }
+                
+                totalCost = totalCost.add(cost.multiply(new BigDecimal(cartItem.getQuantity())));
                 orderItem.setProduct(cartItem.getProduct());
                 orderItem.setQuantity(cartItem.getQuantity());
-                orderItem.setPrice(cartItem.getProduct().getPrice().multiply(new BigDecimal(cartItem.getQuantity())));
+                orderItem.setPrice(cartItem.getProduct().getPriceAfterDiscount().multiply(new BigDecimal(cartItem.getQuantity())));
                 
-                // Set the relationship manually without needing addOrderItem
+                //set bidirectional then;
                 orderItem.setOrder(order);
 
-                // Add orderItem to the list of OrderItems
+                // add orderItem to the list of OrderItems
                 orderItems.add(orderItem);
+                
 
-                // Calculate total amount
                 totalAmount = totalAmount.add(orderItem.getPrice());
                 
                 if (!cartItem.getProduct().getStore().isGcash()) {
@@ -103,6 +142,18 @@ public class OrderService {
                 if (!cartItem.getProduct().getStore().isDoDelivery()) {
                     deliveryAvailable = false;
                 }
+                
+             // the store variable to the product's store
+                if (store == null) {
+                    store = cartItem.getProduct().getStore();
+                }
+                
+                //log SELLER action: SA BABA BUYER
+                User seller = cartItem.getProduct().getStore().getUser();
+
+                String sellerDescription = " purchased " + cartItem.getQuantity() + " of " + cartItem.getProduct().getName();
+                UserLog sellerLog = new UserLog(seller, "SALE", sellerDescription, currentUser);
+                sellerLogs.add(sellerLog); //later, use for loop to retrieve all into one UserLog.repository
             }
 
             // Set the total price and order items in the order entity
@@ -111,7 +162,12 @@ public class OrderService {
 
             
             
-            
+            order.setCost(totalCost);
+            if (store != null) {
+                order.setStore(store);
+            } else {
+                throw new RuntimeException("Store info error");
+            }
             
          // Validate Payment Method (GCash or Cash)
             if (!gcashAvailable && paymentMethod.equals("gcash")) {
@@ -132,11 +188,26 @@ public class OrderService {
             
      
             // Save the order to the repository
-            orderRepository.save(order);
+            OrderEntity orderSaved =  orderRepository.save(order);
 
             // Optionally clear the cart after placing the order
             cart.getCartItems().clear();
             cartRepository.save(cart);
+            
+            
+            //log buyer action (user)
+            String description = " purchased items with orderId: " + orderSaved.getId();
+            UserLog log = new UserLog(user, "ORDER", description ,currentUser);
+            userLogRepository.save(log);
+            
+            //i want to loop thru.... 
+            for(UserLog sellerLog: sellerLogs) {
+            	userLogRepository.save(sellerLog);
+            }
+            
+            
+            
+
 
             return new OrderEntityDTO(order);
     	} catch (Exception e) {
@@ -150,9 +221,15 @@ public class OrderService {
 
 
 
-    public List<OrderEntityDTO> getOrdersForSeller(Long storeId) {
+    public List<OrderEntityDTO> getOrdersForSeller(Long sellerId) {
     	 //TODO show full buyer info
-        List<OrderEntity> orders = orderRepository.findOrdersByStoreId(storeId);
+    	User user = userRepository.findById(sellerId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+    	
+    	Store store = storeRepository.findById(user.getStore().getId())
+        .orElseThrow(() -> new RuntimeException("User not found"));
+
+        List<OrderEntity> orders = orderRepository.findOrdersByStoreId(store.getId());
         return orders.stream()
                      .map(OrderEntityDTO::new)  // we must have that special constructor
                      .collect(Collectors.toList());
@@ -230,12 +307,15 @@ public class OrderService {
         User user = userRepository.findById(sellerId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         
-        Long storeId = user.getStore().getId();
+//        Long storeId = user.getStore().getId();
 
 
+		Store store = storeRepository.findById(user.getStore().getId())
+				 .orElseThrow(() -> new RuntimeException("store not found"));
+        
         // Ensure the seller is authorized to view this order
         boolean sellerHasProduct = order.getOrderItems().stream()
-                .anyMatch(orderItem -> orderItem.getProduct().getStore().getId().equals(storeId));
+                .anyMatch(orderItem -> orderItem.getProduct().getStore().getId().equals(store.getId()));
         
         if (!sellerHasProduct) {
             throw new RuntimeException("You are not authorized to view this order");
@@ -245,18 +325,22 @@ public class OrderService {
     }
     
     @Transactional
-    public OrderEntityDTO updateOrderStatus(Long orderId, String status, Long sellerId) {
+    public OrderEntityDTO updateOrderStatus(Long orderId, String status, Long sellerId, String currentUser) {
     	//get orders by orderid
     	OrderEntity order = orderRepository.findById(sellerId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
     	User user = userRepository.findById(sellerId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+    	
+    	Store store = storeRepository.findById(user.getStore().getId())
+				 .orElseThrow(() -> new RuntimeException("store not found"));
+       
         
-        Long storeId = user.getStore().getId();
+//        Long storeId = user.getStore().getId();
     	
     	boolean sellerIsTheOwnerOfProduct = order.getOrderItems().stream()
-    			.anyMatch(item -> item.getProduct().getStore().getId().equals(storeId));
+    			.anyMatch(item -> item.getProduct().getStore().getId().equals(store.getId()));
     	
     	if (!sellerIsTheOwnerOfProduct) {
     		throw new MyCustomException("Not authorized to edit");
@@ -264,6 +348,11 @@ public class OrderService {
     	
     	order.setStatus(status); // PENDING, ACCEPTED, REJECTED
     	orderRepository.save(order);
+    	
+    	String description = currentUser + " updated order with orderId: " + order.getId();
+        UserLog log = new UserLog(user, "UPDATE", description, currentUser);
+        userLogRepository.save(log);
+
     	return new OrderEntityDTO(order);
     	//verify if current user is allowed to change the status thru sellerId
     	
@@ -271,7 +360,7 @@ public class OrderService {
     }
     
     @Transactional
-    public OrderEntityDTO confirmOrder(User user, Long orderId, String message) {
+    public OrderEntityDTO confirmOrder(User user, Long orderId, String message, String currentUser) {
     	//first find the order id
     	
     	// loop thru items to 
@@ -301,9 +390,18 @@ public class OrderService {
                 throw new RuntimeException("Insufficient stock for product: " + product.getName());
     		}
     		
+
+    		
+    		
     		//decremenet the stock value
     		product.setQuantity(product.getQuantity() - orderItem.getQuantity());
-    		productRepository.save(product);
+    		
+    		
+    		//save the modified Product using repository;
+    		//after saving, we can send the UPDATED PROUTDTO to publisher SSE
+    		Product savedProduct = productRepository.save(product);
+    		ProductDTO productDto = new ProductDTO(savedProduct);
+            eventPublisher.publishEvent(new ProductUpdateEvent(this, productDto));  // Publish the event
     	}
     	
     	//update seller salary
@@ -311,20 +409,33 @@ public class OrderService {
     			.orElseThrow(() -> new RuntimeException("store not found"));
     	
     	
-    	//seller.setRevenue
+    	//TODO seller.setRevenue
+    	//TODO seller.setRevenue
+    	//TODO seller.setRevenue
+    	//TODO seller.setRevenue
+
     	
     	order.setStatus("ACCEPTED");
    
     	OrderEntity savedOrder =  orderRepository.save(order);
     	OrderEntityDTO orderEntityDTO =  new OrderEntityDTO(savedOrder);
     	orderEntityDTO.setMessageFromSeller(message);
+    	
+    	
+    	
+    	String description = " CONFIREMD ORDER " + order.getId();
+        UserLog log = new UserLog(user, "ACCEPT", description, currentUser);
+        userLogRepository.save(log);
+        
+        eventPublisher.publishEvent(new OrderUpdateEvent(this, orderEntityDTO));  // Publish the event
+        //ALSO THE PRODUCT DTO
     	return orderEntityDTO;
     	
 
     }
     
-    
-    public OrderEntityDTO rejectOrderOfUser(User user, Long orderId, String message) {
+    @Transactional
+    public OrderEntityDTO rejectOrderOfUser(User user, Long orderId, String message, String currentUser) {
     	//find the order thru id
     	
     	//use for loop thru orderitem
@@ -335,6 +446,9 @@ public class OrderService {
     	OrderEntity order = orderRepository.findById(orderId)
     			.orElseThrow(() -> new RuntimeException("seller not found"));
 
+    	Store store = storeRepository.findById(user.getStore().getId())
+				 .orElseThrow(() -> new RuntimeException("store not found"));
+    	
     	for (OrderItem orderItem : order.getOrderItems()) {
             Product product = orderItem.getProduct();
             if (!product.getStore().getId().equals(user.getStore().getId())) {
@@ -353,6 +467,14 @@ public class OrderService {
     	OrderEntity savedOrder =  orderRepository.save(order);
     	OrderEntityDTO orderEntityDTO =  new OrderEntityDTO(savedOrder);
     	orderEntityDTO.setMessageFromSeller(message);
+    	
+    	String description = "SELLER: " + store.getUser().getFullName() + " REJECTED ORDER " + order.getId();
+        UserLog log = new UserLog(user, "REJECT", description, currentUser);
+        userLogRepository.save(log);
+        
+        eventPublisher.publishEvent(new OrderUpdateEvent(this, orderEntityDTO));  // Publish the event
+
+    	
     	return orderEntityDTO;
     }
     
@@ -365,6 +487,95 @@ public class OrderService {
     
     
     
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    //FOR TABLE AT REACT (    //but for performance wise, use db.)
+    //product's name: product's order id: product's order created at, product's order status
+//product > oi > o. so Use the order to start the loop.
+    public List<RecentOrdersTable> findRecentProductOrdersByStoreUserIdForTable(Long userId) {
+
+        List<OrderEntity> orders = orderRepository.findByStoreUserId(userId);
+
+        List<RecentOrdersTable> recentOrders = new ArrayList<>();
+
+        for (OrderEntity order : orders) {
+            LocalDateTime createdAt = order.getCreatedAt();
+            String status = order.getStatus();
+            Long orderId = order.getId();
+            BigDecimal totalPrice = order.getTotalPrice();
+
+            //get all first then input to List<>.
+            //loop oi for productNAmes
+            for(OrderItem oi: order.getOrderItems()) {
+            	String productName = oi.getProduct().getName();
+            	
+            	recentOrders.add(new RecentOrdersTable(
+                        productName,
+                        orderId, //potentially may repeat
+                        createdAt, //potentially may repeat
+                        status, //potentially may repeat
+                        totalPrice //potentially may repeat
+                    ));
+                }
+            }
+        
+        recentOrders.sort((o1, o2) -> o2.getCreatedAt().compareTo(o1.getCreatedAt()));
+        
+        return recentOrders;
+        
+        
+
+    }
+    public List<RecentOrdersTable> findRecentProductOrdersByStoreUserIdForTableUsingDb(Long userId){
+    	return orderRepository.findRecentProductOrdersByStoreUserIdForTable(userId);
+    }
+    
+    
+    
+    public List<RankingCustomerDTO> rankCustomersByOrderCount(Long storeId, int limit){
+        Pageable pageable = PageRequest.of(0, limit);
+    	Page<RankingCustomerDTO> topCustomers = orderRepository.rankCustomersByOrderCount(storeId, pageable);
+    	
+    	return topCustomers.getContent();
+    }
+    
+    public List<RankingCustomerDTO> rankCustomersByRevenueGive(Long storeId, int limit){
+        Pageable pageable = PageRequest.of(0, limit);
+    	Page<RankingCustomerDTO> topCustomers = orderRepository.rankCustomersByRevenueGive(storeId, pageable);
+    	
+    	return topCustomers.getContent();
+    }
+    
+    public List<RankingCustomerDTO> rankCustomersByProfit(Long storeId, int limit){
+        Pageable pageable = PageRequest.of(0, limit);
+    	Page<RankingCustomerDTO> topCustomers = orderRepository.rankCustomersByProfit(storeId, pageable);
+    	
+    	return topCustomers.getContent();
+    }
+    
+    
+    public List<RankingCustomerDTO> rankCustomersByWeightedScore(Long storeId, int limit){
+        Pageable pageable = PageRequest.of(0, limit);
+    	Page<RankingCustomerDTO> topCustomers = orderRepository.rankCustomersByWeightedScore(storeId, pageable);
+    	
+    	return topCustomers.getContent();
+    }
+    
+    public List<RankingCustomerDTO> rankCustomersByRecencyActive(Long storeId, int limit){
+        Pageable pageable = PageRequest.of(0, limit);
+    	Page<RankingCustomerDTO> topCustomers = orderRepository.rankCustomersByRecencyActive(storeId, pageable);
+    	
+    	return topCustomers.getContent();
+    }
     
     
 }

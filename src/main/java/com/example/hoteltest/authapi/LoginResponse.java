@@ -7,6 +7,8 @@ public class LoginResponse {
 
     private long userId;
     
+    private String refreshToken;
+    
     public String getToken() {
         return token;
     }
@@ -30,6 +32,16 @@ public class LoginResponse {
 	public void setUserId(long userId) {
 		this.userId = userId;
 	}
+
+	public String getRefreshToken() {
+		return refreshToken;
+	}
+
+	public void setRefreshToken(String refreshToken) {
+		this.refreshToken = refreshToken;
+	}
+
+	
     
     
 }

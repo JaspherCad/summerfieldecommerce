@@ -42,7 +42,7 @@ public class SecurityConfiguration {
                 
                 // Set up URL authorization rules
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**", "/h2-console/**").permitAll() // Allow unauthenticated access to these endpoints
+                        .requestMatchers("/auth/**", "/h2-console/**", "/products/seller/**", "/api/auth/refresh-token").permitAll() // Allow unauthenticated access to these endpoints
                         .anyRequest().permitAll() // Require authentication for all other requests
                 )
                 

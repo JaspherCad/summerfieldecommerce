@@ -122,7 +122,7 @@ public class CartService {
             	
             	if(!currentCartStore.getId().equals(newProductStore.getId())) {
             		// Custom status code and message for store mismatch
-            	    response.setStatusCode(300);  // Use 300 or any other custom code within 200-299 range
+            	    response.setStatusCode(300);  //custom code to create myown exception hhe
             	    response.setMessage("Store mismatch. Would you like to clear the cart?");
             	    return response;
                     //STOP HERE
@@ -217,6 +217,15 @@ public class CartService {
                 productDTO.setQuantity(product.getQuantity());
                 productDTO.setCategory(product.getCategory());
                 productDTO.setImgSrc(product.getImgSrc());
+                
+              //new
+                product.setCost(productDTO.getCost());
+                product.setDiscount(productDTO.getDiscount());
+                
+                BigDecimal priceAfterDiscountSol = calculatePriceAfterDiscount(productDTO.getPrice(), productDTO.getDiscount());
+                product.setPriceAfterDiscount(priceAfterDiscountSol);
+                
+                
                 productDTO.setTagNames(product.getTags().stream()
                         .map(Tag::getName)
                         .collect(Collectors.toList()));
@@ -234,7 +243,7 @@ public class CartService {
                 System.out.println("Product in CartItem: " + product.getName());
 
                 // Add product price to the total amount
-                totalAmount = totalAmount.add(product.getPrice().multiply(new BigDecimal(cartItem.getQuantity())));
+                totalAmount = totalAmount.add(product.getPriceAfterDiscount().multiply(new BigDecimal(cartItem.getQuantity())));
 
                 // Set the productDTO into the cartItemDTO
                 cartItemDTO.setProductResponseDto(productDTO);
@@ -268,6 +277,15 @@ public class CartService {
         }
 
         return response;
+    }
+    
+    
+    private BigDecimal calculatePriceAfterDiscount(BigDecimal price, BigDecimal discount) { 
+    	if (discount == null || discount.compareTo(BigDecimal.ZERO) == 0) { 
+    		return price; 
+    	} 
+    	BigDecimal discountAmount = price.multiply(discount).divide(BigDecimal.valueOf(100)); 
+    	return price.subtract(discountAmount); 
     }
 
     // Method to delete a product from the cart

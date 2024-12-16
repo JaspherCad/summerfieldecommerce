@@ -1,5 +1,13 @@
 package com.example.hoteltest.authapi;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -11,18 +19,23 @@ import com.example.hoteltest.dto.RegisterUserDto;
 import com.example.hoteltest.dto.Response;
 import com.example.hoteltest.dto.UserDTO;
 import com.example.hoteltest.model.User;
+import com.example.hoteltest.service.CustomUserDetailsService;
 
 @RequestMapping("/auth")
 @RestController
 public class AuthenticationController {
     private final JwtService jwtService;
-    
+    private final CustomUserDetailsService customUserDetailsService;
     private final AuthenticationService authenticationService;
 
-    public AuthenticationController(JwtService jwtService, AuthenticationService authenticationService) {
+    public AuthenticationController(JwtService jwtService, AuthenticationService authenticationService, CustomUserDetailsService customUserDetailsService) {
         this.jwtService = jwtService;
         this.authenticationService = authenticationService;
+        this.customUserDetailsService = customUserDetailsService;
     }
+    
+    
+    
 
     @PostMapping("/register")
     public ResponseEntity<Response> register(@RequestBody RegisterUserDto registerUserDto) {
@@ -42,20 +55,63 @@ public class AuthenticationController {
         }
         
     }
-
+    
+    
+    
+    
+    
+    //testing using COOKIES
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> authenticate(@RequestBody LoginUserDTO loginUserDto) {
+    public ResponseEntity<?> authenticate(@RequestBody LoginUserDTO loginUserDto) {
         User authenticatedUser = authenticationService.authenticate(loginUserDto);
 
         String jwtToken = jwtService.generateToken(authenticatedUser);
+        String jwtRefresher = jwtService.generateRefreshToken(authenticatedUser);
+        
+        
+        ResponseCookie jwtCookie = ResponseCookie.from("jwt", jwtToken)
+                .httpOnly(true)
+                .secure(false) 
+                .path("/secure") // JWT sent only to endpoints under /secure
+                .maxAge(600) // Token expiry in seconds
+                .sameSite("Strict")
+                .build();
 
-        LoginResponse loginResponse = new LoginResponse();
-        		loginResponse.setToken(jwtToken);
-        		loginResponse.setExpiresIn(jwtService.getExpirationTime());
-        		loginResponse.setUserId(authenticatedUser.getId());
-
-        return ResponseEntity.ok(loginResponse);
+        ResponseCookie refreshTokenCookie = ResponseCookie.from("refreshToken", jwtRefresher)
+                .httpOnly(true)
+                .secure(false) //TRUE IN PRODUCTION BECAUSE OF HTTPS
+                .path("/auth-required") // Refresh token sent only to endpoints under /refresh-token KASI SPECIFIC AND SENSITIVE
+                .maxAge(7 * 24 * 60 * 60) // 7 days for the refresh token
+                .sameSite("Strict")
+                .build();
+        
+        
+        Map<String, Object> responseBody = new HashMap<>();
+        responseBody.put("userId", authenticatedUser.getId());
+        responseBody.put("message", "Login successful!");
+        
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
+                .body(responseBody);
     }
+    
+    
+
+//    @PostMapping("/login")
+//    public ResponseEntity<LoginResponse> authenticate(@RequestBody LoginUserDTO loginUserDto) {
+//        User authenticatedUser = authenticationService.authenticate(loginUserDto);
+//
+//        String jwtToken = jwtService.generateToken(authenticatedUser);
+//        String jwtRefresher = jwtService.generateRefreshToken(authenticatedUser);
+//        
+//        LoginResponse loginResponse = new LoginResponse();
+//        		loginResponse.setToken(jwtToken);
+//        		loginResponse.setExpiresIn(jwtService.getExpirationTime());
+//        		loginResponse.setUserId(authenticatedUser.getId());
+//        		loginResponse.setRefreshToken(jwtRefresher);
+//        return ResponseEntity.ok(loginResponse);
+//    }
     
     @GetMapping("/test")
     public String authenticate() {
@@ -63,4 +119,79 @@ public class AuthenticationController {
 
         return "OK??";
     }
+    
+    
+    
+    
+    
+    
+    
+    
+    @PostMapping("/refresh-token")
+    public ResponseEntity<?> refreshToken(@RequestBody TokenRequest tokenRequest) {
+        String refreshToken = tokenRequest.getRefreshToken();
+        String userEmail = jwtService.extractUsername(refreshToken);
+        //returns EMAIL
+        // Load the user details from your user service
+        UserDetails userDetails = customUserDetailsService.loadUserByUsername(userEmail); //LOAD BY MAIL
+
+        // Validate the refresh token
+        if (jwtService.isTokenValid(refreshToken, userDetails)) {
+            // Generate a new access token
+            String token = jwtService.generateRefreshToken(userDetails);
+            return ResponseEntity.ok(new TokenResponse(token, refreshToken));
+        } else {
+            // Handle invalid refresh token case
+            Response response = new Response();
+            response.setMessage("Error from backend: Registered refresh token is invalid");
+            System.out.println("BACKEND: Error occurred during token refresh");
+            return ResponseEntity.ok(response);
+        }
+    }
+
+    
+    private static class TokenRequest {
+        private String refreshToken;
+
+        public String getRefreshToken() {
+            return refreshToken;
+        }
+
+        public void setRefreshToken(String refreshToken) {
+            this.refreshToken = refreshToken;
+        }
+    }
+
+    
+    private static class TokenResponse {
+        private String token;
+        private String refreshToken;
+
+        public TokenResponse(String accessToken, String refreshToken) {
+            this.token = accessToken;
+            this.refreshToken = refreshToken;
+        }
+
+		public String getToken() {
+			return token;
+		}
+
+		public void setToken(String token) {
+			this.token = token;
+		}
+
+		public String getRefreshToken() {
+			return refreshToken;
+		}
+
+		public void setRefreshToken(String refreshToken) {
+			this.refreshToken = refreshToken;
+		}
+
+        
+    }
+    
+    
+    
+    
 }

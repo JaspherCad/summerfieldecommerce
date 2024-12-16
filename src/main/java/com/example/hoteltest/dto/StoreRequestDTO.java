@@ -7,6 +7,7 @@ public class StoreRequestDTO {
 	    private String description;
 	    private Integer block;
 	    private Integer lot;
+	    private Long gcashNumber;
 	    private String phoneNumber;
 	    private LocalTime openingTime;
 	    private LocalTime closingTime;
@@ -65,6 +66,12 @@ public class StoreRequestDTO {
 		}
 		public void setDoDelivery(boolean doDelivery) {
 			this.doDelivery = doDelivery;
+		}
+		public Long getGcashNumber() {
+			return gcashNumber;
+		}
+		public void setGcashNumber(Long gcashNumber) {
+			this.gcashNumber = gcashNumber;
 		}
 	    
 	    

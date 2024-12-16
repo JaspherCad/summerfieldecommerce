@@ -27,12 +27,20 @@ public class OrderEntityDTO {
     private String paymentMethod; //gcash or cash
     private String pickupOrDeliver; //pickup or delivery
     private String messageFromSeller;
+    private Store store;
+    private StoreResponseDTO storeDto;
+    private BigDecimal cost;
+
+    
+    
     // Constructors, getters, setters
 
     public OrderEntityDTO() {}
 
     public OrderEntityDTO(OrderEntity order) {
+    	this.storeDto = new StoreResponseDTO(order.getStore());
     	this.paymentMethod = order.getPaymentMethod();
+    	this.cost = order.getCost();
     	this.pickupOrDeliver = order.getPickupOrDeliver();
         this.orderId = order.getId();
         this.userId = order.getBuyer().getId();
@@ -173,6 +181,22 @@ public class OrderEntityDTO {
 
 	public void setMessageFromSeller(String messageFromSeller) {
 		this.messageFromSeller = messageFromSeller;
+	}
+
+	public Store getStore() {
+		return store;
+	}
+
+	public void setStore(Store store) {
+		this.store = store;
+	}
+
+	public StoreResponseDTO getStoreDto() {
+		return storeDto;
+	}
+
+	public void setStoreDto(StoreResponseDTO storeDto) {
+		this.storeDto = storeDto;
 	}
 
 	

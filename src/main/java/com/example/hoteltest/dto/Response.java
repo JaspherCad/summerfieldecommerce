@@ -43,6 +43,17 @@ public class Response {
     private StoreResponseDTO storeResponseDTO;
     private Long storeId;
     private List<OrderEntityDTO> listOfOrderEntityDTO;
+    private ReviewDTO reviewDTO;
+    
+    
+	public ReviewDTO getReviewDTO() {
+		return reviewDTO;
+	}
+
+	public void setReviewDTO(ReviewDTO reviewDTO) {
+		this.reviewDTO = reviewDTO;
+	}
+
 	public int getStatusCode() {
 		return statusCode;
 	}

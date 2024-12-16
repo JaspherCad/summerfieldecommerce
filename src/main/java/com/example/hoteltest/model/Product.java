@@ -35,10 +35,47 @@ public class Product {
     private String category;
     @Column(updatable = false)
     private LocalDateTime createdAt;
+    
+    
+    //NEW VALUE DELETE IF ERROR
+    @Column(nullable = true)
+    private BigDecimal cost; //magkano ginastos sa product. for analysis
+    @Column(nullable = true)
+    private BigDecimal discount;  // Discount percentage
+
+    private BigDecimal priceAfterDiscount; //is a must
+    
+    
+
+    									//pag binura ko products, burado lahat ito.
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference
+    private List<Review> reviews = new ArrayList<>();
+    
+    private double averageRating;
 
     
-    
-    @ManyToOne
+    public List<Review> getReviews() {
+		return reviews;
+	}
+
+
+	public void setReviews(List<Review> reviews) {
+		this.reviews = reviews;
+	}
+
+
+	public Double getAverageRating() {
+		return averageRating;
+	}
+
+
+	public void setAverageRating(Double averageRating) {
+		this.averageRating = averageRating;
+	}
+
+
+	@ManyToOne
     @JoinColumn(name = "store_id", referencedColumnName = "id")
     private Store store; // Link product to store
     
@@ -100,6 +137,18 @@ public class Product {
 	public String getDescription() {
 		return description;
 	}
+	
+	
+
+	public BigDecimal getDiscount() {
+		return discount;
+	}
+
+
+	public void setDiscount(BigDecimal discount) {
+		this.discount = discount;
+	}
+
 
 	public void setDescription(String description) {
 		this.description = description;
@@ -181,6 +230,34 @@ public class Product {
 
 	public void setImgSrc(String imgSrc) {
 		this.imgSrc = imgSrc;
+	}
+
+
+	
+
+
+	public BigDecimal getCost() {
+		return cost;
+	}
+
+
+	public void setCost(BigDecimal cost) {
+		this.cost = cost;
+	}
+
+
+	public void setAverageRating(double averageRating) {
+		this.averageRating = averageRating;
+	}
+
+
+	public BigDecimal getPriceAfterDiscount() {
+		return priceAfterDiscount;
+	}
+
+
+	public void setPriceAfterDiscount(BigDecimal priceAfterDiscount) {
+		this.priceAfterDiscount = priceAfterDiscount;
 	}
 	
 	

@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -30,6 +31,16 @@ public class OrderItem {
     private OrderEntity order; // Order reference
 
     private BigDecimal price;
+    
+    
+    //NEW DELETE IF ERROR.. THIS ARE FOR DISCOUNTS or changes of order price. FOR FUTURE UPDATES ONLY
+		//    @Column(nullable = true)
+		//    private BigDecimal priceAtPurchase;
+		//    @Column(nullable = true)
+		//    private BigDecimal costAtPurchase;
+		//
+		//    @Column(nullable = true)
+		//    private BigDecimal discount; // Total discount applied to the order.. not PER ITEM. meaning buo na. maybe for promo or such
 
     private int quantity;
 
@@ -78,6 +89,39 @@ public class OrderItem {
 	public void setPrice(BigDecimal price) {
 		this.price = price;
 	}
+
+
+//	public BigDecimal getPriceAtPurchase() {
+//		return priceAtPurchase;
+//	}
+//
+//
+//	public void setPriceAtPurchase(BigDecimal priceAtPurchase) {
+//		this.priceAtPurchase = priceAtPurchase;
+//	}
+//
+//
+//	public BigDecimal getCostAtPurchase() {
+//		return costAtPurchase;
+//	}
+//
+//
+//	public void setCostAtPurchase(BigDecimal costAtPurchase) {
+//		this.costAtPurchase = costAtPurchase;
+//	}
+//
+//
+//	public BigDecimal getDiscount() {
+//		return discount;
+//	}
+//
+//
+//	public void setDiscount(BigDecimal discount) {
+//		this.discount = discount;
+//	}
+//
+
+	
 
     // Constructors, getters, and setters
     

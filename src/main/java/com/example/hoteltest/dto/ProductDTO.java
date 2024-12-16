@@ -30,9 +30,49 @@ public class ProductDTO {
     private boolean offB; //true
     private boolean gcash;
     private boolean doDelivery;
+    private double averageRating;
+    private Long REALsellerId;
+    private BigDecimal cost; //magkano ginastos sa product. for analysis
+    private BigDecimal discount;  // Discount percentage
 
     
-    public ProductDTO(Product product) {
+    private BigDecimal priceAfterDiscount; //is a must
+
+    
+
+	public BigDecimal getPriceAfterDiscount() {
+		return priceAfterDiscount;
+	}
+
+	public void setPriceAfterDiscount(BigDecimal priceAfterDiscount) {
+		this.priceAfterDiscount = priceAfterDiscount;
+	}
+
+	public BigDecimal getCost() {
+		return cost;
+	}
+
+	public void setCost(BigDecimal cost) {
+		this.cost = cost;
+	}
+
+	public BigDecimal getDiscount() {
+		return discount;
+	}
+
+	public void setDiscount(BigDecimal discount) {
+		this.discount = discount;
+	}
+
+	public Long getREALsellerId() {
+		return REALsellerId;
+	}
+
+	public void setREALsellerId(Long rEALsellerId) {
+		REALsellerId = rEALsellerId;
+	}
+
+	public ProductDTO(Product product) {
 		super();
 		this.id = product.getId();
 		this.name = product.getName();
@@ -40,10 +80,16 @@ public class ProductDTO {
 		this.price = product.getPrice();
 		this.quantity = product.getQuantity();
 		this.category = product.getCategory();
+		this.averageRating = product.getAverageRating();
 		
 		if (product.getStore().getId() != null) {
             this.sellerId = product.getStore().getId(); // Set the sellerId if the seller is not null
         }
+		
+		if (product.getStore().getId() != null) {
+            this.REALsellerId = product.getStore().getUser().getId(); // Set the sellerId if the seller is not null
+        }
+		
 //		this.storeResponseDTO = new StoreResponseDTO(product.getStore()); causes recursion
 		this.tagNames = product.getTags().stream()
                  .map(Tag::getName) // Extracting the tag names
@@ -61,6 +107,10 @@ public class ProductDTO {
 		
 		this.gcash = product.getStore().isGcash();
 		this.doDelivery = product.getStore().isDoDelivery();
+		this.cost = product.getCost();
+		this.discount = product.getDiscount();
+		this.priceAfterDiscount = product.getPriceAfterDiscount();
+		
 
 	}
 
@@ -250,6 +300,14 @@ public class ProductDTO {
 
 
 	
+
     
+    public double getAverageRating() {
+		return averageRating;
+	}
+
+	public void setAverageRating(double averageRating) {
+		this.averageRating = averageRating;
+	}
     
 }

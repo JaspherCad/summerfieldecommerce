@@ -1,8 +1,8 @@
 -- Inserting data into the `users` table
 INSERT INTO users (id, full_name, email, password, created_at, phone_number, role)
 VALUES 
-    (1, 'John Doe', 'john.doe@example.com', 'password123', CURRENT_TIMESTAMP, '1234567890', 'ROLE_USER'),
-    (2, 'Jane Smith', 'jane.smith@example.com', 'password456', CURRENT_TIMESTAMP, '0987654321', 'ROLE_USER');
+    (1, 'JohnDoe', 'john.doe@example.com', 'password123', CURRENT_TIMESTAMP, '1234567890', 'SELLER'),
+    (2, 'JaneSmith', 'jane.smith@example.com', 'password456', CURRENT_TIMESTAMP, '0987654321', 'SELLER');
 
 -- Inserting data into the `room` table
 INSERT INTO room (id, room_type, room_price, room_description)
@@ -34,11 +34,11 @@ INSERT INTO store (id, do_delivery, gcash,  name, description, block, lot, phone
     
     
 -- Insert into product with isFeatured column
-INSERT INTO product (id, price, quantity, store_id, img_src, category,description, name, created_at, is_featured) VALUES 
-(1, 299.99, 50, 1, 'https://cdn.britannica.com/18/137318-050-29F7072E/rooster-Rhode-Island-Red-roosters-chicken-domestication.jpg', 'Electronics', 'High-quality wireless headphonesHigh-quality wireless headphonesHigh-quality wireless headphonesHigh-quality wireless headphonesv', 'AirBeats Pro', CURRENT_TIMESTAMP, true), 
-(2, 199.99, 100, 2,'https://cdn.britannica.com/18/137318-050-29F7072E/rooster-Rhode-Island-Red-roosters-chicken-domestication.jpg', 'Books', 'Bestselling mystery novel', 'The Silent Patient', CURRENT_TIMESTAMP, false),
-(3, 79.99, 75, 1, 'https://cdn.britannica.com/18/137318-050-29F7072E/rooster-Rhode-Island-Red-roosters-chicken-domestication.jpg' ,'Home', 'Ergonomic office chair', 'ComfortSeat Deluxe', CURRENT_TIMESTAMP, true), 
-(4, 49.99, 200, 2, 'https://cdn.britannica.com/18/137318-050-29F7072E/rooster-Rhode-Island-Red-roosters-chicken-domestication.jpg' ,'Toys', 'Educational building blocks for kids', 'Creative Bricks Set', CURRENT_TIMESTAMP, false);
+INSERT INTO product (id, price, cost, quantity, store_id, average_rating, img_src, category,description, name, created_at, is_featured) VALUES 
+(1, 299.99, 200.00, 50, 1, 5.0, 'https://cdn.britannica.com/18/137318-050-29F7072E/rooster-Rhode-Island-Red-roosters-chicken-domestication.jpg', 'Electronics', 'High-quality wireless headphonesHigh-quality wireless headphonesHigh-quality wireless headphonesHigh-quality wireless headphonesv', 'AirBeats Pro', CURRENT_TIMESTAMP, true), 
+(2, 199.99, 110.00, 100, 2, 5.0,'https://cdn.britannica.com/18/137318-050-29F7072E/rooster-Rhode-Island-Red-roosters-chicken-domestication.jpg', 'Books', 'Bestselling mystery novel', 'The Silent Patient', CURRENT_TIMESTAMP, false),
+(3, 79.99, 50.25, 75, 1, 5.0,'https://cdn.britannica.com/18/137318-050-29F7072E/rooster-Rhode-Island-Red-roosters-chicken-domestication.jpg' ,'Home', 'Ergonomic office chair', 'ComfortSeat Deluxe', CURRENT_TIMESTAMP, true), 
+(4, 49.99, 30.00, 200, 2, 5.0, 'https://cdn.britannica.com/18/137318-050-29F7072E/rooster-Rhode-Island-Red-roosters-chicken-domestication.jpg' ,'Toys', 'Educational building blocks for kids', 'Creative Bricks Set', CURRENT_TIMESTAMP, false);
 
 
 
@@ -75,3 +75,22 @@ VALUES
     -- Creative Bricks Set is in Toys and Educational categories
     (4, 4), -- toys
     (4, 6); -- educational
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+-- Inserting sample data into the `reviews` table
+INSERT INTO review (rating, comment, user_id, product_id, created_at) VALUES
+    (5, 'Excellent product, high quality!', 1, 1, '2024-10-10 14:30:00'),
+    (5, 'Great read, highly recommended.', 2, 2, '2024-10-15 09:00:00'),
+    (5, 'Comfortable but could be cheaper.', 1, 3, '2024-10-18 12:45:00'),
+    (5, 'My kids love this educational toy!', 2, 4, '2024-10-20 11:15:00'),
+    (5, 'Good value for money.', 1, 2, '2024-10-21 16:00:00');
+

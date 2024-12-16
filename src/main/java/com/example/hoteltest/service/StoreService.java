@@ -47,19 +47,23 @@ public class StoreService {
 			        store.setPhoneNumber(storeRequestDTO.getPhoneNumber());
 			        store.setOpeningTime(storeRequestDTO.getOpeningTime());
 			        store.setClosingTime(storeRequestDTO.getClosingTime());
-			        store.setUser(currentUser); // Associate store with user
-
+			        store.setUser(currentUser); 
+			        store.setGcashNumber(storeRequestDTO.getGcashNumber());
 			        store.setGcash(storeRequestDTO.isGcash());
 			        store.setDoDelivery(storeRequestDTO.isDoDelivery());
-
 			        
+			        currentUser.setStore(store);
 			        
 			        store = storeRepository.save(store);
 			        StoreResponseDTO storeResponseDTO = new StoreResponseDTO(store);
 			        response.setStoreResponseDTO(storeResponseDTO);
 			        response.setStatusCode(200);
 		            response.setMessage("Store created successfully");
-
+		            
+		            currentUser.setStoreId(store.getId());
+		            
+		            //save the currentUser to repositroy... to prevent NULL
+		            userRepository.save(currentUser);
 			        return response;
 			 
 			 
@@ -69,6 +73,15 @@ public class StoreService {
 	            response.setMessage("Error during registration: " + e.getMessage());			}
 			return response;
 			}
+	 
+	 
+	 public Response myStore(User user) {
+		 Response response = new Response();
+		 Store store = storeRepository.findById(user.getStore().getId())
+				 .orElseThrow(() -> new RuntimeException("store not found"));
+		 response.setStoreResponseDTO(new StoreResponseDTO(store));
+		 return response;
+	 }
 
 		 
 		 
