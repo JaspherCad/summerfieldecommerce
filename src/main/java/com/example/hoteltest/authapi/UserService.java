@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.hoteltest.dto.Response;
 import com.example.hoteltest.dto.UserDTO;
@@ -32,7 +33,18 @@ public class UserService {
         this.userRepository = userRepository;
     }
     
-    
+    @Transactional
+    public User getUserWithDetails(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Initialize lazy-loaded collections
+        System.out.println("Orders size: " + user.getOrders().size());
+        System.out.println("Bookings size: " + user.getBookings().size());
+        System.out.println("Reviews size: " + user.getReviews().size());
+
+        return user;
+    }
 
     public List<User> allUsers() {
         List<User> users = new ArrayList<>();

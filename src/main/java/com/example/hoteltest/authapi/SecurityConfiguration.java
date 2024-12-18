@@ -42,8 +42,9 @@ public class SecurityConfiguration {
                 
                 // Set up URL authorization rules
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**", "/h2-console/**", "/products/seller/**", "/api/auth/refresh-token").permitAll() // Allow unauthenticated access to these endpoints
-                        .anyRequest().permitAll() // Require authentication for all other requests
+                        .requestMatchers("/auth/**", "/h2-console/**", "/products/seller/**", "/products/updates", "/products/homepage","/api/auth/refresh-token").permitAll() // Allow unauthenticated access to these endpoints
+                        .requestMatchers("/users/me").authenticated()
+                        .anyRequest().authenticated() // Require authentication for all other requests
                 )
                 
                 
@@ -72,8 +73,9 @@ public class SecurityConfiguration {
         // Set allowed origins (adjust for your frontend)
         configuration.setAllowedOrigins(List.of("http://localhost:3000"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS")); // Common HTTP methods
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "Accept"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "Accept", "Cookie"));
         configuration.setAllowCredentials(true); // If your frontend needs cookies or authentication credentials
+        configuration.setExposedHeaders(List.of("Authorization", "Cache-Control", "Content-Type"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration); // Apply CORS settings to all routes

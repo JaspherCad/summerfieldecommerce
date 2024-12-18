@@ -60,44 +60,8 @@ public class AuthenticationController {
     
     
     
-    //testing using COOKIES
-    @PostMapping("/login")
-    public ResponseEntity<?> authenticate(@RequestBody LoginUserDTO loginUserDto) {
-        User authenticatedUser = authenticationService.authenticate(loginUserDto);
-
-        String jwtToken = jwtService.generateToken(authenticatedUser);
-        String jwtRefresher = jwtService.generateRefreshToken(authenticatedUser);
-        
-        
-        ResponseCookie jwtCookie = ResponseCookie.from("jwt", jwtToken)
-                .httpOnly(true)
-                .secure(false) 
-                .path("/secure") // JWT sent only to endpoints under /secure
-                .maxAge(600) // Token expiry in seconds
-                .sameSite("Strict")
-                .build();
-
-        ResponseCookie refreshTokenCookie = ResponseCookie.from("refreshToken", jwtRefresher)
-                .httpOnly(true)
-                .secure(false) //TRUE IN PRODUCTION BECAUSE OF HTTPS
-                .path("/auth-required") // Refresh token sent only to endpoints under /refresh-token KASI SPECIFIC AND SENSITIVE
-                .maxAge(7 * 24 * 60 * 60) // 7 days for the refresh token
-                .sameSite("Strict")
-                .build();
-        
-        
-        Map<String, Object> responseBody = new HashMap<>();
-        responseBody.put("userId", authenticatedUser.getId());
-        responseBody.put("message", "Login successful!");
-        
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
-                .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
-                .body(responseBody);
-    }
     
     
-
 //    @PostMapping("/login")
 //    public ResponseEntity<LoginResponse> authenticate(@RequestBody LoginUserDTO loginUserDto) {
 //        User authenticatedUser = authenticationService.authenticate(loginUserDto);
@@ -111,7 +75,47 @@ public class AuthenticationController {
 //        		loginResponse.setUserId(authenticatedUser.getId());
 //        		loginResponse.setRefreshToken(jwtRefresher);
 //        return ResponseEntity.ok(loginResponse);
-//    }
+//    } OLD CODE
+    
+
+    @PostMapping("/login")
+    public ResponseEntity<?> authenticate(@RequestBody LoginUserDTO loginUserDto) {
+        User authenticatedUser = authenticationService.authenticate(loginUserDto);
+
+        // Generate JWT and Refresh Tokens
+        String jwtToken = jwtService.generateToken(authenticatedUser);
+        String jwtRefresher = jwtService.generateRefreshToken(authenticatedUser);
+
+        // Create HTTP-only cookies for the tokens
+        ResponseCookie jwtCookie = ResponseCookie.from("jwt", jwtToken)
+                .httpOnly(true)
+                .secure(false) // Set to true in production
+                .path("/")
+                .maxAge(600000) // Token expiry in seconds
+                .sameSite("Strict")
+                .build();
+
+//        ResponseCookie refreshTokenCookie = ResponseCookie.from("refreshToken", jwtRefresher)
+//                .httpOnly(true)
+//                .secure(false) // Set to true in production
+//                .path("/")
+//                .maxAge(7 * 24 * 60 * 60) // 7 days for the refresh token
+//                .sameSite("Strict")
+//                .build();
+
+        // 
+        Map<String, Object> responseBody = new HashMap<>();
+        responseBody.put("userId", authenticatedUser.getId());
+        responseBody.put("message", "Login successful!");
+        responseBody.put("expiresIn", jwtService.getExpirationTime());
+
+        // Return response with cookies set in the headers
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
+//                .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
+                .body(responseBody);
+    }
+
     
     @GetMapping("/test")
     public String authenticate() {

@@ -164,7 +164,7 @@ public class ProductController {
     
 	    // Use `currentUser` directly without needing to access `SecurityContextHolder`
 			//coz getting product without authorization may cause string like "annonymouse" and not a class.
-		System.out.println(currentUser);
+	    System.out.println("Current User at getProductOfSpecifcUser: " + currentUser);
 	    Response response = productService.getProductOfSpecificUser(sellerId, currentUser);
 	   
         return ResponseEntity.status(response.getStatusCode()).body(response);

@@ -47,14 +47,17 @@ public class JwtService {
     public String generateToken(UserDetails userDetails) {
         return generateToken(new HashMap<>(), userDetails);
     }
+    
+    public long getExpirationTime() {
+        return jwtExpiration;
+    }
 
+    //THE IMPORATANT PART: FOCUS HERE!
     public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
         return buildToken(extraClaims, userDetails, jwtExpiration);
     }
 
-    public long getExpirationTime() {
-        return jwtExpiration;
-    }
+    
 
     private String buildToken(
             Map<String, Object> extraClaims,

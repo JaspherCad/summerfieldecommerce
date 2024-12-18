@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.example.hoteltest.model.Booking;
+import com.example.hoteltest.model.Review;
 import com.example.hoteltest.model.User;
 
 public class UserDTO {
@@ -18,6 +19,9 @@ public class UserDTO {
     private String password;
 
 	private List<BookingsDto> listOfBookings = new ArrayList<BookingsDto>();
+    private List<ReviewDTO> reviews = new ArrayList<>();
+    private List<OrderEntityDTO> orders = new ArrayList<>();
+
 	public Long getId() {
 		return id;
 	}
@@ -82,6 +86,18 @@ public class UserDTO {
 	
 	
 	
+	public List<ReviewDTO> getReviews() {
+		return reviews;
+	}
+	public void setReviews(List<ReviewDTO> reviews) {
+		this.reviews = reviews;
+	}
+	public List<OrderEntityDTO> getOrders() {
+		return orders;
+	}
+	public void setOrders(List<OrderEntityDTO> orders) {
+		this.orders = orders;
+	}
 	public UserDTO() {
 	}
 	public UserDTO(User u) {
@@ -93,6 +109,7 @@ public class UserDTO {
 		this.role = u.getRole();
 		this.block = u.getBlock();
 		this.lot = u.getLot();
+		
 	}
 
 	
