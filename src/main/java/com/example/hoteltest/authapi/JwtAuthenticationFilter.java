@@ -19,6 +19,14 @@ import org.springframework.web.servlet.HandlerExceptionResolver;
 
 import java.io.IOException;
 
+
+
+//This filter is designed to intercept incoming HTTP requests, 
+//extract JWT tokens from cookies, and authenticate users based on the tokens. 
+
+
+
+
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final HandlerExceptionResolver handlerExceptionResolver;
@@ -36,26 +44,75 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         this.handlerExceptionResolver = handlerExceptionResolver;
     }
 
+//    @Override
+//    protected void doFilterInternal(
+//        @NonNull HttpServletRequest request,
+//        @NonNull HttpServletResponse response,
+//        @NonNull FilterChain filterChain
+//    ) throws ServletException, IOException {
+//        final String authHeader = request.getHeader("Authorization");
+//
+//        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+//            filterChain.doFilter(request, response);
+//            return;
+//        }
+//
+//        try {
+//        	//Bearer eyasfhousfhjanfji3q4oadhvi23.lol.haha.ORAH!
+//            final String jwt = authHeader.substring(7); //remove the Bearer HAHAHAH
+//            final String userEmail = jwtService.extractUsername(jwt);
+//
+//            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+//
+//            if (userEmail != null && authentication == null) {
+//                UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
+//
+//                if (jwtService.isTokenValid(jwt, userDetails)) {
+//                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+//                            userDetails,
+//                            null,
+//                            userDetails.getAuthorities()
+//                    );
+//
+//                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+//                    SecurityContextHolder.getContext().setAuthentication(authToken);
+//                }
+//            }
+//
+//            filterChain.doFilter(request, response);
+//        } catch (Exception exception) {
+//            handlerExceptionResolver.resolveException(request, response, null, exception);
+//        }
+//    }
+    
+    
     @Override
     protected void doFilterInternal(
         @NonNull HttpServletRequest request,
         @NonNull HttpServletResponse response,
         @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
-        final String authHeader = request.getHeader("Authorization");
+        String jwt = null;
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        // Extract JWT from cookies
+        if (request.getCookies() != null) {
+            for (var cookie : request.getCookies()) {
+                if ("jwt".equals(cookie.getName())) {
+                    jwt = cookie.getValue();
+                    break;
+                }
+            }
+        }
+
+        if (jwt == null) {
             filterChain.doFilter(request, response);
             return;
         }
 
         try {
-            final String jwt = authHeader.substring(7);
             final String userEmail = jwtService.extractUsername(jwt);
 
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-            if (userEmail != null && authentication == null) {
+            if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
 
                 if (jwtService.isTokenValid(jwt, userDetails)) {
@@ -75,4 +132,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             handlerExceptionResolver.resolveException(request, response, null, exception);
         }
     }
+
+    
+    
+    
 }

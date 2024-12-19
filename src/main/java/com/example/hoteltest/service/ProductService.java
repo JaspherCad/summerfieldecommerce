@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.hoteltest.dto.ProductDTO;
 import com.example.hoteltest.dto.Response;
@@ -78,6 +79,7 @@ public class ProductService {
 
     
     // Method for adding a product by a seller to a specific store
+    @Transactional
     public Response addProduct(ProductDTO productDTO, String email) {
         Response response = new Response();
         try {
@@ -174,7 +176,7 @@ public class ProductService {
     
     
     
-    
+    @Transactional
     private BigDecimal calculatePriceAfterDiscount(BigDecimal price, BigDecimal discount) { 
     	if (discount == null || discount.compareTo(BigDecimal.ZERO) == 0) { 
     		return price; 
@@ -220,6 +222,7 @@ public class ProductService {
     
 
     // Method for getting a specific product by product ID
+    @Transactional(readOnly = true)
     public Response getProduct(Long productId) {
         Response response = new Response();
         try {
@@ -238,6 +241,7 @@ public class ProductService {
     }
 
     // Method for getting products of a specific STORE!
+    @Transactional(readOnly = true)
     public Response getProductOfSpecificUser(Long sellerId, User currentUser) {
         Response response = new Response();
         try {
@@ -285,6 +289,7 @@ public class ProductService {
     }
 
     // Method for updating a product
+    @Transactional
     public Response updateProduct(Long productId, ProductDTO productDTO, User currentUser) {
         Response response = new Response();
 
@@ -390,6 +395,7 @@ public class ProductService {
     }
 
     // Method for deleting a product belonging to a specific seller
+    @Transactional
     public Response deleteProductOfSeller(Long productId, User seller) {
         Response response = new Response();
         try {
@@ -429,7 +435,7 @@ public class ProductService {
 
         return response;
     }
-    
+    @Transactional
     public Response addTagsToProduct(Long productId, List<String> tagNames, User user) {
     	Response response = new Response();
         
@@ -467,7 +473,7 @@ public class ProductService {
 
         return response;
     }
-    
+    @Transactional
     public List<ProductDTO> getProductsByTagName(String tagName){
     	List<Product> products = productRepository.findByTagName(tagName.toLowerCase());
     	return products.stream()
@@ -475,21 +481,21 @@ public class ProductService {
     	        .collect(Collectors.toList());
 
     }
-    
+    @Transactional(readOnly = true)
     public List<Product> getFeaturedProducts() {
         return productRepository.findFeaturedProducts();
     }
-    
+    @Transactional(readOnly = true)
     public List<Product> getNewArrivals(int limit) {
         Pageable pageable = PageRequest.of(0, limit);  
         return productRepository.findNewArrivals(pageable);
     }
-    
+    @Transactional(readOnly = true)
     public List<Product> getBestSellingProducts(int limit) {
         Pageable pageable = PageRequest.of(0, limit);  
         return productRepository.findBestSellingProducts(pageable);
     }
-    
+    @Transactional(readOnly = true)
     public List<TopProductDTO> getBestSellingProductOfAShopByShopId(long storeId, int limit){ //can be top 5
         Pageable pageable = PageRequest.of(0, limit);
     	Page<TopProductDTO> top5ProductPage = productRepository.getBestSellingProductOfAShopByShopId(storeId, pageable);

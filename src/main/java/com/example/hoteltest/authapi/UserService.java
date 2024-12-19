@@ -7,7 +7,10 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.hoteltest.dto.Response;
 import com.example.hoteltest.dto.UserDTO;
@@ -32,7 +35,18 @@ public class UserService {
         this.userRepository = userRepository;
     }
     
-    
+    @Transactional
+    public User getUserWithDetails(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Initialize lazy-loaded collections
+        System.out.println("Orders size: " + user.getOrders().size());
+        System.out.println("Bookings size: " + user.getBookings().size());
+        System.out.println("Reviews size: " + user.getReviews().size());
+
+        return user;
+    }
 
     public List<User> allUsers() {
         List<User> users = new ArrayList<>();
@@ -225,4 +239,24 @@ public class UserService {
 
         return users;
     }
+    
+    
+    
+    
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+        return org.springframework.security.core.userdetails.User.builder()
+                .username(user.getEmail())
+                .password(user.getPassword())
+                .authorities(user.getRole())
+                .build();
+    }
+
+    
+    
+    
+    
+    
+    
 }

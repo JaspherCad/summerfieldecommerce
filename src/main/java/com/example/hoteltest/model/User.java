@@ -55,7 +55,7 @@ public class User implements UserDetails {
     private Integer lot;
 
     @JsonIgnore
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "user", cascade = CascadeType.ALL)
+    @OneToMany(fetch = FetchType.EAGER, mappedBy = "user", cascade = CascadeType.ALL)
     private List<Booking> bookings = new ArrayList<Booking>();
     
     
@@ -66,7 +66,7 @@ public class User implements UserDetails {
     @JsonIgnore // Prevent recursion
     private Cart cart;
     
-    @OneToMany(mappedBy = "buyer", cascade = CascadeType.ALL)
+    @OneToMany(fetch = FetchType.EAGER, mappedBy = "buyer", cascade = CascadeType.ALL)
     @JsonIgnore // Prevent recursion
     private List<OrderEntity> orders = new ArrayList<>();
     
@@ -81,14 +81,14 @@ public class User implements UserDetails {
     @Column(nullable = true) 
     private Long storeId;    
     
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(fetch = FetchType.EAGER, mappedBy = "user", cascade = CascadeType.ALL)
     @JsonIgnore
     private List<Review> reviews = new ArrayList<>();
     
     
     
     
-    
+    //lahat ng one to many gagawing fetch = FetchType.EAGER
     
     
     

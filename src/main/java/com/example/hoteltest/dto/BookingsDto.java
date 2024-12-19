@@ -130,6 +130,12 @@ public class BookingsDto {
 	}
 
 
+	public BookingsDto() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+
+
 	@Override
 	public String toString() {
 		return "BookingsDto [id=" + id + ", checkInDate=" + checkInDate + ", checkOutDate=" + checkOutDate

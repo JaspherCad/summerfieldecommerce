@@ -42,7 +42,7 @@ import com.example.hoteltest.service.sellerdashboard.RankingCustomerDTO;
 import com.example.hoteltest.service.sellerdashboard.RecentOrdersTable;
 import com.example.hoteltest.service.sellerdashboard.TopProductDTO;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class OrderService {
@@ -220,7 +220,7 @@ public class OrderService {
     }
 
 
-
+    @Transactional(readOnly = true)
     public List<OrderEntityDTO> getOrdersForSeller(Long sellerId) {
     	 //TODO show full buyer info
     	User user = userRepository.findById(sellerId)
@@ -237,10 +237,10 @@ public class OrderService {
 
     
     
-    //test if new update did not wor:
-    	//use entity instaed of DTO
+//	test if new update did not wor:
+//	use entity instaed of DTO
     
-    
+    @Transactional(readOnly = true)
     public Response getOrdersOfSpecificUser(Long userId) {
     	
     	Response response = new Response();
@@ -299,7 +299,7 @@ public class OrderService {
 
 
     //error will be here. USER ID IS NOT ALWAYS STORE ID
-    
+    @Transactional(readOnly = true)
     public OrderEntityDTO getSpecificOrderDetails(Long orderId, Long sellerId) {
         OrderEntity order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
@@ -501,6 +501,8 @@ public class OrderService {
     //FOR TABLE AT REACT (    //but for performance wise, use db.)
     //product's name: product's order id: product's order created at, product's order status
 //product > oi > o. so Use the order to start the loop.
+    
+    @Transactional(readOnly = true)
     public List<RecentOrdersTable> findRecentProductOrdersByStoreUserIdForTable(Long userId) {
 
         List<OrderEntity> orders = orderRepository.findByStoreUserId(userId);
@@ -535,26 +537,27 @@ public class OrderService {
         
 
     }
+    @Transactional(readOnly = true)
     public List<RecentOrdersTable> findRecentProductOrdersByStoreUserIdForTableUsingDb(Long userId){
     	return orderRepository.findRecentProductOrdersByStoreUserIdForTable(userId);
     }
     
     
-    
+    @Transactional(readOnly = true)
     public List<RankingCustomerDTO> rankCustomersByOrderCount(Long storeId, int limit){
         Pageable pageable = PageRequest.of(0, limit);
     	Page<RankingCustomerDTO> topCustomers = orderRepository.rankCustomersByOrderCount(storeId, pageable);
     	
     	return topCustomers.getContent();
     }
-    
+    @Transactional(readOnly = true)
     public List<RankingCustomerDTO> rankCustomersByRevenueGive(Long storeId, int limit){
         Pageable pageable = PageRequest.of(0, limit);
     	Page<RankingCustomerDTO> topCustomers = orderRepository.rankCustomersByRevenueGive(storeId, pageable);
     	
     	return topCustomers.getContent();
     }
-    
+    @Transactional(readOnly = true)
     public List<RankingCustomerDTO> rankCustomersByProfit(Long storeId, int limit){
         Pageable pageable = PageRequest.of(0, limit);
     	Page<RankingCustomerDTO> topCustomers = orderRepository.rankCustomersByProfit(storeId, pageable);
@@ -562,14 +565,14 @@ public class OrderService {
     	return topCustomers.getContent();
     }
     
-    
+    @Transactional(readOnly = true)
     public List<RankingCustomerDTO> rankCustomersByWeightedScore(Long storeId, int limit){
         Pageable pageable = PageRequest.of(0, limit);
     	Page<RankingCustomerDTO> topCustomers = orderRepository.rankCustomersByWeightedScore(storeId, pageable);
     	
     	return topCustomers.getContent();
     }
-    
+    @Transactional(readOnly = true)
     public List<RankingCustomerDTO> rankCustomersByRecencyActive(Long storeId, int limit){
         Pageable pageable = PageRequest.of(0, limit);
     	Page<RankingCustomerDTO> topCustomers = orderRepository.rankCustomersByRecencyActive(storeId, pageable);
