@@ -12,6 +12,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import com.example.hoteltest.exceptiom.CustomAuthenticationEntryPoint;
+
 import java.util.List;
 
 @Configuration
@@ -20,12 +22,14 @@ public class SecurityConfiguration {
 
     private final AuthenticationProvider authenticationProvider;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
     public SecurityConfiguration(
             JwtAuthenticationFilter jwtAuthenticationFilter,
-            AuthenticationProvider authenticationProvider) {
+            AuthenticationProvider authenticationProvider,
+            CustomAuthenticationEntryPoint customAuthenticationEntryPoint) {
         this.authenticationProvider = authenticationProvider;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.customAuthenticationEntryPoint = customAuthenticationEntryPoint;
     }
 
     @Bean
@@ -39,7 +43,9 @@ public class SecurityConfiguration {
                 
                 .headers(headers -> headers.frameOptions().disable())
 
-                
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(customAuthenticationEntryPoint) // Use custom entry point
+                )
                 // Set up URL authorization rules
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**", "/h2-console/**", "/products/seller/**", "/products/updates", "/products/homepage","/api/auth/refresh-token").permitAll() // Allow unauthenticated access to these endpoints

@@ -1,4 +1,6 @@
 package com.example.hoteltest.authapi;
+import java.util.Arrays;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -21,17 +23,25 @@ import com.example.hoteltest.dto.UserDTO;
 import com.example.hoteltest.model.User;
 import com.example.hoteltest.service.CustomUserDetailsService;
 
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+
 @RequestMapping("/auth")
 @RestController
 public class AuthenticationController {
     private final JwtService jwtService;
     private final CustomUserDetailsService customUserDetailsService;
     private final AuthenticationService authenticationService;
+    private final RefreshTokenService refreshTokenService;
+    private final UserService userService;
 
-    public AuthenticationController(JwtService jwtService, AuthenticationService authenticationService, CustomUserDetailsService customUserDetailsService) {
+    public AuthenticationController(JwtService jwtService, AuthenticationService authenticationService, CustomUserDetailsService customUserDetailsService, RefreshTokenService refreshTokenService, UserService userService) {
         this.jwtService = jwtService;
         this.authenticationService = authenticationService;
         this.customUserDetailsService = customUserDetailsService;
+        this.refreshTokenService = refreshTokenService;
+        this.userService = userService;
+
     }
     
     
@@ -78,44 +88,140 @@ public class AuthenticationController {
 //    } OLD CODE
     
 
-    @PostMapping("/login")
-    public ResponseEntity<?> authenticate(@RequestBody LoginUserDTO loginUserDto) {
-        User authenticatedUser = authenticationService.authenticate(loginUserDto);
+	    @PostMapping("/login")
+	    public ResponseEntity<?> authenticate(@RequestBody LoginUserDTO loginUserDto) {
+	        User authenticatedUser = authenticationService.authenticate(loginUserDto);
+	
+	        // Generate JWT and Refresh Tokens
+	        String jwtToken = jwtService.generateToken(authenticatedUser);
+	        RefreshToken refreshToken = refreshTokenService.createRefreshToken(loginUserDto.getEmail());
+	        // Create HTTP-only cookies for the tokens
+	        ResponseCookie jwtCookie = ResponseCookie.from("jwt", jwtToken)
+	                .httpOnly(true)
+	                .secure(false) // Set to true in production
+	                .path("/")
+	                .maxAge(150000) // 30 mins
+	                .sameSite("Strict")
+	                .build();
+	
+	        ResponseCookie refreshTokenCookie = ResponseCookie.from("refreshToken", refreshToken.getToken())
+	                .httpOnly(true)
+	                .secure(false) // Set to true in production
+	                .path("/")
+	                .maxAge(600000) // 7 days
+	                .sameSite("Strict")
+	                .build();
+	
+	        // 
+	        Map<String, Object> responseBody = new HashMap<>();
+	        responseBody.put("userId", authenticatedUser.getId());
+	        responseBody.put("message", "Login successful!");
+	        responseBody.put("jwtExpiresIn", 15);
+	        responseBody.put("refreshTokenExpiresIn", 60);
 
-        // Generate JWT and Refresh Tokens
-        String jwtToken = jwtService.generateToken(authenticatedUser);
-        String jwtRefresher = jwtService.generateRefreshToken(authenticatedUser);
-
-        // Create HTTP-only cookies for the tokens
-        ResponseCookie jwtCookie = ResponseCookie.from("jwt", jwtToken)
+	        // Return response with cookies set in the headers
+	        return ResponseEntity.ok()
+	                .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
+	//                .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
+	                .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
+	                .body(responseBody);
+	    }
+    
+    
+	    
+	    
+	
+    
+    @PostMapping("/logoutToken")
+    public ResponseEntity<?> logoutToken(HttpServletRequest request) {
+    	//create new token, same jwt and same for refresh token
+    	//but set the maxAge to 0
+    	
+    	
+    	ResponseCookie expiredjwtCookie = ResponseCookie.from("jwt", "")
                 .httpOnly(true)
                 .secure(false) // Set to true in production
                 .path("/")
-                .maxAge(600000) // Token expiry in seconds
+                .maxAge(0) // 30 min
                 .sameSite("Strict")
                 .build();
 
-//        ResponseCookie refreshTokenCookie = ResponseCookie.from("refreshToken", jwtRefresher)
-//                .httpOnly(true)
-//                .secure(false) // Set to true in production
-//                .path("/")
-//                .maxAge(7 * 24 * 60 * 60) // 7 days for the refresh token
-//                .sameSite("Strict")
-//                .build();
-
-        // 
+        ResponseCookie expiredrefreshTokenCookie = ResponseCookie.from("refreshToken", "")
+                .httpOnly(true)
+                .secure(false) // Set to true in production
+                .path("/")
+                .maxAge(0) // 7 days
+                .sameSite("Strict")
+                .build();
+        
         Map<String, Object> responseBody = new HashMap<>();
-        responseBody.put("userId", authenticatedUser.getId());
-        responseBody.put("message", "Login successful!");
-        responseBody.put("expiresIn", jwtService.getExpirationTime());
-
-        // Return response with cookies set in the headers
+        responseBody.put("message", "All cookie has been cleared successful!");
+    	
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, expiredjwtCookie.toString())
 //                .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, expiredrefreshTokenCookie.toString())
                 .body(responseBody);
     }
+    
+    
+    
+    @PostMapping("/refreshToken")
+    public ResponseEntity<?> refreshToken(HttpServletRequest request) {
+        // Extract the refresh token from cookies
+        String refreshToken = Arrays.stream(request.getCookies())
+                .filter(cookie -> "refreshToken".equals(cookie.getName()))
+                .findFirst()
+                .map(Cookie::getValue) //or .map(cookie -> cookie.getValue())
+                .orElseThrow(() -> new RuntimeException("Refresh token not found"));
 
+        return refreshTokenService.findByToken(refreshToken)
+                .map(refreshTokenService::verifyExpiration) //if expired <0 delete token from repository
+                .map(RefreshToken::getUserInfo)
+                .map(userInfo -> {
+                	UserDetails userDetails = userService.loadUserByUsername(userInfo.getEmail()); //get user details
+                	String accessToken = jwtService.generateToken(userDetails); //generate new JWT
+                	
+                	
+                    //get current JWT but use the REFRESH TOKEN to replace JWT
+                    ResponseCookie newJwtCookie = ResponseCookie.from("jwt", accessToken)
+                            .httpOnly(true)
+                            .secure(false) // Set to true in production
+                            .path("/")
+                            .maxAge(15) // Token expiry in seconds (10 minutes)
+                            .sameSite("Strict")
+                            .build();
+
+                    Map<String, Object> responseBody = new HashMap<>();
+                    responseBody.put("userId", userInfo.getId());
+                    responseBody.put("message", "Token refreshed successfully!");
+                    responseBody.put("expiresIn", jwtService.getExpirationTime());
+
+                    // Return response with cookies set in the headers
+                    return ResponseEntity.ok()
+                            .header(HttpHeaders.SET_COOKIE, newJwtCookie.toString())
+                            .body(responseBody);
+                }).orElseThrow(() -> new RuntimeException("Refresh Token is not in DB..!!"));
+    }
+
+
+//  @PostMapping("/refreshToken")
+//  public JwtResponseDTO refreshToken(@RequestBody RefreshTokenRequestDTO refreshTokenRequestDTO){
+//      return refreshTokenService.findByToken(refreshTokenRequestDTO.getToken())
+//              .map(refreshTokenService::verifyExpiration)
+//              .map(RefreshToken::getUserInfo)
+//              .map(userInfo -> {
+//                  String accessToken = jwtService.GenerateToken(userInfo.getUsername());
+//                  return JwtResponseDTO.builder()
+//                          .accessToken(accessToken)
+//                          .token(refreshTokenRequestDTO.getToken()).build();
+//              }).orElseThrow(() ->new RuntimeException("Refresh Token is not in DB..!!"));
+//  }
+  
+  //OUR DIFFERENCE: Here they send the TOKEN from POST request because this is not cookies. 
+  //this is default JWT way (my old process)
+  //BUT now since i am using cookies, lets get the JWT token from our cookies
+  
     
     @GetMapping("/test")
     public String authenticate() {

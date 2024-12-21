@@ -17,6 +17,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 
+import com.example.hoteltest.exceptiom.ExpiredTokenException;
+import com.example.hoteltest.exceptiom.MyCustomException;
+
 import java.io.IOException;
 
 
@@ -85,6 +88,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 //        }
 //    }
     
+    //WELL DITO PUMAPASOK MGA INCOMING REQUEST, KUMABAGA TAYO YUNG INTERCEPTOR BEFORE THE
+    //REQUEST WILL BE SENT TO CONTROLLERS
+    
     
     @Override
     protected void doFilterInternal(
@@ -93,20 +99,32 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
         String jwt = null;
-
+        String refreshToken = null;
+        
         // Extract JWT from cookies
         if (request.getCookies() != null) {
             for (var cookie : request.getCookies()) {
                 if ("jwt".equals(cookie.getName())) {
                     jwt = cookie.getValue();
-                    break;
+//                    break;
+                }
+                if ("refreshToken".equals(cookie.getName())) {
+                	refreshToken = cookie.getValue();
                 }
             }
         }
+        
 
+        if (jwt == null && refreshToken != null) {
+        	request.setAttribute("isJwtMissing", true); 
+        	request.setAttribute("isRefreshMissing", false); 
+
+            filterChain.doFilter(request, response);  
+        }
+        
         if (jwt == null) {
-            filterChain.doFilter(request, response);
-            return;
+            filterChain.doFilter(request, response);  
+
         }
 
         try {
@@ -124,6 +142,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
+                }else {
+                    throw new ExpiredTokenException("JWT token is invalid or expired.");
                 }
             }
 
